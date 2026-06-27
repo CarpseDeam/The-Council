@@ -4,9 +4,10 @@ CouncilCast Studio is a Python desktop application that transforms source docume
 
 ## Features
 
-- **Add Sources** — Select one or more `.txt`, `.md`, or `.pdf` files
-- **Generate Episode** — Run the full pipeline: source brief → council discussion → podcast script → audio
-- **Export Run** — Save all generated artifacts (brief, discussion, script, audio) to a timestamped directory
+- **Add Source Documents** — Select `.txt`, `.md`, or `.pdf` files
+- **Episode Style** — Choose from Deep Dive, Skeptical Review, Beginner Friendly, Founder Pitch Breakdown, or Research Roundtable
+- **Create Podcast From Sources** — Run the full pipeline: source brief → council discussion → podcast script → audio
+- **Export Episode Package** — Save all generated artifacts to a timestamped directory
 - **Demo Mode** — Try the full workflow immediately with simulated responses, no API key required
 - **Real Mode** — Connect to OpenAI for genuine AI-generated content
 
@@ -67,16 +68,20 @@ To use real AI-generated content (instead of Demo Mode):
 
 ## How to Use
 
-1. Click **Add Sources** and select one or more supported files.
-2. (Optional) Choose a discussion **Preset** (Deep Dive, Skeptical Review, etc.).
+1. Click **Add Source Documents** and select one or more supported files.
+2. Choose an **Episode Style** from the dropdown (Deep Dive, etc.).
 3. (Optional) Uncheck **Demo Mode** and set `COUNCILCAST_LLM_API_KEY` for real AI generation.
-4. Click **Generate Episode** to run the full pipeline.
-5. Review results in the **Source Brief**, **Council Discussion**, and **Episode Script** tabs.
-6. Click **Export Run** to save all artifacts to a timestamped directory.
+4. Click **Create Podcast From Sources** to run the full pipeline.
+5. Review results in the **Brief**, **Council**, **Script**, and **Audio** tabs.
+6. Click **Export Episode Package** to save all artifacts to a timestamped directory.
 
 ## Audio
 
 V1 audio is single-voice narration generated from the podcast script. The Audio tab shows the file path and provides **Play** and **Open Folder** buttons.
+
+## App Flow
+
+Add sources, choose an episode style, create the podcast, then export the episode package.
 
 ## Project Structure
 

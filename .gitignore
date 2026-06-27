@@ -14,4 +14,3 @@ __pycache__/
 *.pyc
 .env
 exports/
-/.aura/hazards.db
