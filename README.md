@@ -21,7 +21,9 @@ pip install -r requirements.txt
 python app.py
 ```
 
-No API key is required for Demo Mode. The UI uses `tkinter` (included with most Python installations).
+The UI uses `customtkinter` (included in `requirements.txt`). It provides a consistent dark theme with no platform-specific white scrollbar or widget issues.
+
+No API key is required for Demo Mode. The UI uses `customtkinter` for a modern dark theme.
 
 ## Configuration
 

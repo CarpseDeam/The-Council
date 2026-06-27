@@ -1,5 +1,6 @@
 openai
 python-dotenv
 pypdf
+customtkinter
 # gTTS is an optional fallback for TTS (requires internet); install only if needed:
 # gtts
