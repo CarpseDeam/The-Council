@@ -46,14 +46,15 @@ class CouncilCastApp:
         self.audio_error: Optional[str] = None
         self.export_path: Optional[Path] = None
         self.llm_provider = get_llm_provider()
+        self.demo_mode_var = tk.BooleanVar(value=not has_real_llm())
 
         self._build_ui()
 
         # Show provider info in status on startup
-        if has_real_llm():
-            self.status_var.set("Ready (real LLM provider configured)")
+        if self.demo_mode_var.get():
+            self.status_var.set("Ready (demo mode — using simulated responses)")
         else:
-            self.status_var.set("Ready (development mode — using simulated responses)")
+            self.status_var.set("Ready (real LLM provider configured)")
 
     # ── UI Construction ────────────────────────────────────────────────
 
@@ -105,6 +106,13 @@ class CouncilCastApp:
             width=28,
         )
         self.preset_combo.pack(side=tk.LEFT)
+
+        self.demo_mode_check = ttk.Checkbutton(
+            preset_frame,
+            text="Demo Mode (simulated responses)",
+            variable=self.demo_mode_var,
+        )
+        self.demo_mode_check.pack(side=tk.LEFT, padx=(12, 0))
 
         # ── Button row 2 ───────────────────────────────────────────
         row2 = ttk.Frame(self.root)
@@ -349,6 +357,18 @@ class CouncilCastApp:
             messagebox.showwarning("No files", "Please add at least one source file first.")
             return
 
+        # Validate API key in real mode
+        if not self.demo_mode_var.get():
+            api_key = os.environ.get("COUNCILCAST_LLM_API_KEY") or os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                messagebox.showerror(
+                    "API Key Required",
+                    "Real LLM mode requires COUNCILCAST_LLM_API_KEY to be set.\n\n"
+                    "Either set this environment variable or enable Demo Mode "
+                    "to use simulated responses.",
+                )
+                return
+
         self._set_buttons_enabled(False)
         self.export_btn.config(state=tk.DISABLED)
         self.status_var.set("Initializing...")
@@ -375,6 +395,18 @@ class CouncilCastApp:
     def _run_pipeline(self) -> None:
         """Run the full generation pipeline on a background thread."""
         try:
+            # Choose provider based on demo mode toggle
+            from councilcast.config import get_llm_provider_for_mode, FakeLLMProvider
+            demo_mode = self.demo_mode_var.get()
+            provider = get_llm_provider_for_mode(demo_mode)
+            if provider is None:
+                self.root.after(0, lambda: messagebox.showerror(
+                    "Configuration Error",
+                    "No LLM provider available. Enable Demo Mode or set COUNCILCAST_LLM_API_KEY.",
+                ))
+                return
+            self.llm_provider = provider
+
             # 1. Read files
             self.root.after(0, lambda: self.status_var.set("Reading source files..."))
             self.documents = read_documents(self.selected_files)

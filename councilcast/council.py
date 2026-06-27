@@ -17,18 +17,24 @@ def generate_council_discussion(
 
 
 def _parse_discussion(response: str) -> CouncilDiscussion:
-    """Parse role-labeled turns from the LLM response."""
+    """Parse role-labeled turns from the LLM response.
+
+    Captures multi-line text for each turn until the next role label.
+    """
     turns: list[CouncilTurn] = []
-    pattern = re.compile(r"^\*\*(.+?)\*\*\s*:\s*(.+)$", re.MULTILINE)
-    for match in pattern.finditer(response):
+    # Match role labels like **Moderator**: at start of line
+    pattern = re.compile(r'^\*\*(.+?)\*\*\s*:\s*', re.MULTILINE)
+    matches = list(pattern.finditer(response))
+    if not matches:
+        turns.append(CouncilTurn(
+            role="Moderator",
+            text="No discussion could be parsed from the generated content.",
+        ))
+        return CouncilDiscussion(turns=turns)
+    for i, match in enumerate(matches):
         role = match.group(1).strip()
-        text = match.group(2).strip()
+        start = match.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(response)
+        text = response[start:end].strip()
         turns.append(CouncilTurn(role=role, text=text))
-    if not turns:
-        turns.append(
-            CouncilTurn(
-                role="Moderator",
-                text="No discussion could be parsed from the generated content.",
-            )
-        )
     return CouncilDiscussion(turns=turns)

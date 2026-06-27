@@ -1,0 +1,5 @@
+openai
+python-dotenv
+pypdf
+# gTTS is an optional fallback for TTS (requires internet); install only if needed:
+# gtts

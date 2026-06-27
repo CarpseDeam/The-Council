@@ -47,14 +47,13 @@ def _parse_brief(response: str) -> SourceBrief:
                     sections["Summary"] = stripped
 
         # Bullet items for list sections
-        elif stripped.startswith("•") and current_section in (
-            "Key Points",
-            "Important Details",
-            "Questions Worth Discussing",
-        ):
-            item = stripped.lstrip("•").strip()
-            if item:
-                sections[current_section].append(item)
+        elif current_section in ("Key Points", "Important Details", "Questions Worth Discussing"):
+            for marker in ("•", "-", "*"):
+                if stripped.startswith(marker):
+                    item = stripped[len(marker):].strip()
+                    if item:
+                        sections[current_section].append(item)
+                    break
 
     brief = SourceBrief(
         title=sections["Title"],

@@ -108,8 +108,15 @@ class GTTSTTSProvider(TTSProvider):
         return Path(output_path).exists()
 
 
-def get_llm_provider() -> LLMProvider:
-    """Return a RealLLMProvider if a key is configured, otherwise FakeLLMProvider."""
+def get_llm_provider_for_mode(demo_mode: bool = False) -> LLMProvider | None:
+    """Return a provider based on demo mode.
+
+    If demo_mode is True, returns FakeLLMProvider.
+    If False, checks environment variables for a real API key.
+    Returns None if no provider is available.
+    """
+    if demo_mode:
+        return FakeLLMProvider()
     api_key = os.environ.get("COUNCILCAST_LLM_API_KEY")
     if api_key:
         return RealLLMProvider(api_key)
@@ -121,7 +128,19 @@ def get_llm_provider() -> LLMProvider:
             UserWarning,
         )
         return RealLLMProvider(api_key)
-    return FakeLLMProvider()
+    return None
+
+
+def get_llm_provider() -> LLMProvider:
+    """Return a RealLLMProvider if a key is configured, otherwise FakeLLMProvider.
+
+    This is the legacy auto-detect function. For explicit mode selection
+    use get_llm_provider_for_mode() instead.
+    """
+    provider = get_llm_provider_for_mode(demo_mode=False)
+    if provider is None:
+        return FakeLLMProvider()
+    return provider
 
 
 def get_tts_provider() -> TTSProvider | None:
