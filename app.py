@@ -52,13 +52,16 @@ class CouncilCastApp:
 
         # Show provider info in status on startup
         if self.demo_mode_var.get():
-            self.status_var.set("Ready (demo mode — using simulated responses)")
+            self.status_var.set("Ready (demo mode). Add source documents to begin.")
         else:
-            self.status_var.set("Ready (real LLM provider configured)")
+            self.status_var.set("Ready (real LLM configured). Add source documents to begin.")
 
     # ── UI Construction ────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
+        style = ttk.Style()
+        style.configure("Primary.TButton", font=("TkDefaultFont", 11, "bold"), padding=(16, 6))
+
         # ── Title bar ──────────────────────────────────────────────
         title_frame = ttk.Frame(self.root)
         title_frame.pack(fill=tk.X, padx=12, pady=(10, 2))
@@ -74,11 +77,21 @@ class CouncilCastApp:
             foreground="gray",
         ).pack(side=tk.LEFT, padx=(8, 0))
 
+        # ── Workflow header ────────────────────────────────────────
+        workflow_frame = ttk.Frame(self.root)
+        workflow_frame.pack(fill=tk.X, padx=12, pady=(6, 2))
+        ttk.Label(
+            workflow_frame,
+            text="1. Add sources  →  2. Choose style  →  3. Create podcast",
+            font=("TkDefaultFont", 10, "bold"),
+            foreground="#444444",
+        ).pack(anchor=tk.W)
+
         # ── Button row 1 ───────────────────────────────────────────
         row1 = ttk.Frame(self.root)
         row1.pack(fill=tk.X, padx=12, pady=(6, 2))
 
-        self.add_btn = ttk.Button(row1, text="Add Sources", command=self._add_files)
+        self.add_btn = ttk.Button(row1, text="Add Source Documents", command=self._add_files)
         self.add_btn.pack(side=tk.LEFT, padx=(0, 4))
 
         self.remove_btn = ttk.Button(
@@ -90,7 +103,7 @@ class CouncilCastApp:
         preset_frame = ttk.Frame(self.root)
         preset_frame.pack(fill=tk.X, padx=12, pady=(4, 2))
 
-        ttk.Label(preset_frame, text="Preset:").pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Label(preset_frame, text="Council Style:").pack(side=tk.LEFT, padx=(0, 6))
         self.preset_var = tk.StringVar(value="Deep Dive")
         self.preset_combo = ttk.Combobox(
             preset_frame,
@@ -114,17 +127,33 @@ class CouncilCastApp:
         )
         self.demo_mode_check.pack(side=tk.LEFT, padx=(12, 0))
 
-        # ── Button row 2 ───────────────────────────────────────────
+        self.config_keys_btn = ttk.Button(
+            preset_frame,
+            text="API Keys",
+            command=self._configure_api_keys,
+        )
+        self.config_keys_btn.pack(side=tk.LEFT, padx=(12, 0))
+
+        # ── Primary action row ─────────────────────────────────────
         row2 = ttk.Frame(self.root)
         row2.pack(fill=tk.X, padx=12, pady=(4, 2))
 
         self.generate_btn = ttk.Button(
             row2,
-            text="Generate Episode",
+            text="Create Podcast From Sources",
             command=self._generate_episode,
             state=tk.DISABLED,
+            style="Primary.TButton",
         )
-        self.generate_btn.pack(side=tk.LEFT, padx=(0, 4))
+        self.generate_btn.pack(side=tk.LEFT, padx=(0, 8))
+
+        self.generate_hint = ttk.Label(
+            row2,
+            text="Add at least one source file to begin.",
+            font=("TkDefaultFont", 9),
+            foreground="#888888",
+        )
+        self.generate_hint.pack(side=tk.LEFT)
 
         self.export_btn = ttk.Button(
             row2,
@@ -132,10 +161,10 @@ class CouncilCastApp:
             command=self._export_run,
             state=tk.DISABLED,
         )
-        self.export_btn.pack(side=tk.LEFT, padx=4)
+        self.export_btn.pack(side=tk.RIGHT, padx=4)
 
-        self.file_count_label = ttk.Label(row2, text="No files")
-        self.file_count_label.pack(side=tk.RIGHT, padx=(4, 0))
+        self.file_count_label = ttk.Label(row2, text="")
+        self.file_count_label.pack(side=tk.RIGHT, padx=(4, 8))
 
         # ── Main split area ────────────────────────────────────────
         main_pw = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
@@ -166,8 +195,17 @@ class CouncilCastApp:
 
         self.brief_tab = self._make_text_tab("Source Brief")
         self.discussion_tab = self._make_text_tab("Council Discussion")
-        self.script_tab = self._make_text_tab("Episode Script")
+        self.script_tab = self._make_text_tab("Podcast Script")
         self.audio_frame = self._make_audio_tab()
+
+        # ── Welcome / empty-state message ──────────────────────────
+        welcome_text = (
+            "Add a source document to begin.\n\n"
+            "CouncilCast Studio will read your source, create a source brief, "
+            "run an AI council discussion, write a two-host podcast script, "
+            "and optionally generate audio."
+        )
+        self._update_text_widget(self.brief_tab, welcome_text)
 
         # ── Status bar ─────────────────────────────────────────────
         self.status_var = tk.StringVar(value="Ready")
@@ -293,9 +331,13 @@ class CouncilCastApp:
         state = tk.NORMAL if enabled else tk.DISABLED
         self.add_btn.config(state=state)
         self.remove_btn.config(state=state)
-        self.generate_btn.config(
-            state=tk.NORMAL if (enabled and self.selected_files) else tk.DISABLED
-        )
+        if enabled and self.selected_files:
+            self.generate_btn.config(state=tk.NORMAL)
+            self.generate_hint.pack_forget()
+        else:
+            self.generate_btn.config(state=tk.DISABLED)
+            if not self.selected_files:
+                self.generate_hint.pack(side=tk.LEFT)
 
     # ── File Management ────────────────────────────────────────────────
 
@@ -331,7 +373,8 @@ class CouncilCastApp:
         count = len(self.selected_files)
         self.file_count_label.config(text=f"{count} file(s)")
         self.generate_btn.config(state=tk.NORMAL)
-        self.status_var.set(f"{count} file(s) selected")
+        self.generate_hint.pack_forget()
+        self.status_var.set(f"Ready to create podcast from {count} source file(s).")
 
     def _remove_selected(self) -> None:
         selected_indices = self.files_listbox.curselection()
@@ -346,9 +389,18 @@ class CouncilCastApp:
         self.file_count_label.config(text=f"{count} file(s)")
         if not self.selected_files:
             self.generate_btn.config(state=tk.DISABLED)
-            self.status_var.set("No files selected")
+            self.generate_hint.pack(side=tk.LEFT)
+            self.status_var.set("Ready. Add source documents to begin.")
+            # Restore welcome message
+            welcome_text = (
+                "Add a source document to begin.\n\n"
+                "CouncilCast Studio will read your source, create a source brief, "
+                "run an AI council discussion, write a two-host podcast script, "
+                "and optionally generate audio."
+            )
+            self._update_text_widget(self.brief_tab, welcome_text)
         else:
-            self.status_var.set(f"{count} file(s) selected")
+            self.status_var.set(f"Ready to create podcast from {count} source file(s).")
 
     # ── Generation Pipeline ────────────────────────────────────────────
 
@@ -368,6 +420,8 @@ class CouncilCastApp:
                     "to use simulated responses.",
                 )
                 return
+
+        self.generate_hint.pack_forget()
 
         self._set_buttons_enabled(False)
         self.export_btn.config(state=tk.DISABLED)
@@ -541,6 +595,130 @@ class CouncilCastApp:
         except Exception as e:
             messagebox.showerror("Export Error", str(e))
             self.status_var.set(f"Export failed: {e}")
+
+    # ── API Keys Dialog ────────────────────────────────────────────────
+
+    def _configure_api_keys(self) -> None:
+        """Open a dialog to view and set API keys, optionally saving to .env."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Configure API Keys")
+        dialog.geometry("520x420")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        # Helper to mask a key for display
+        def _mask(key: str) -> str:
+            if not key:
+                return ""
+            if len(key) <= 10:
+                return key[:3] + "..." + key[-3:]
+            return key[:5] + "..." + key[-4:]
+
+        main = ttk.Frame(dialog, padding=16)
+        main.pack(fill=tk.BOTH, expand=True)
+
+        # -- Explanatory text --
+        ttk.Label(
+            main,
+            text="Configure your OpenAI API keys for CouncilCast Studio.",
+            font=("TkDefaultFont", 10, "bold"),
+        ).pack(anchor=tk.W, pady=(0, 2))
+
+        info_lines = [
+            "• Demo Mode works without any keys — just check the box in the main window.",
+            "• Real LLM Mode requires COUNCILCAST_LLM_API_KEY to be set.",
+            "• TTS audio is optional. Set COUNCILCAST_TTS_API_KEY for voice narration.",
+            "• You can use the same OpenAI API key for both fields.",
+            "• Keys are saved to a .env file in the project root.",
+            "• Never commit .env — it is excluded by .gitignore.",
+        ]
+        for line in info_lines:
+            ttk.Label(main, text=line, wraplength=480, font=("TkDefaultFont", 9)).pack(
+                anchor=tk.W, pady=(1, 0)
+            )
+
+        ttk.Separator(main, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+
+        # -- LLM Key --
+        llm_frame = ttk.Frame(main)
+        llm_frame.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(llm_frame, text="LLM API Key:", font=("TkDefaultFont", 9, "bold")).pack(anchor=tk.W)
+        current_llm = os.environ.get("COUNCILCAST_LLM_API_KEY") or os.environ.get("OPENAI_API_KEY") or ""
+        self._api_llm_var = tk.StringVar(value=current_llm)
+        llm_entry = ttk.Entry(llm_frame, textvariable=self._api_llm_var, width=60, show="*")
+        llm_entry.pack(fill=tk.X, pady=(2, 0))
+        llm_status = _mask(current_llm) if current_llm else "(not set)"
+        ttk.Label(llm_frame, text=f"Current: {llm_status}", font=("TkDefaultFont", 8),
+                  foreground="#555555").pack(anchor=tk.W)
+
+        # -- TTS Key --
+        tts_frame = ttk.Frame(main)
+        tts_frame.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(tts_frame, text="TTS API Key:", font=("TkDefaultFont", 9, "bold")).pack(anchor=tk.W)
+        current_tts = os.environ.get("COUNCILCAST_TTS_API_KEY") or ""
+        self._api_tts_var = tk.StringVar(value=current_tts)
+        tts_entry = ttk.Entry(tts_frame, textvariable=self._api_tts_var, width=60, show="*")
+        tts_entry.pack(fill=tk.X, pady=(2, 0))
+        tts_status = _mask(current_tts) if current_tts else "(not set)"
+        ttk.Label(tts_frame, text=f"Current: {tts_status}", font=("TkDefaultFont", 8),
+                  foreground="#555555").pack(anchor=tk.W)
+
+        # -- Toggle visibility checkbox --
+        self._api_show_var = tk.BooleanVar(value=False)
+
+        def _toggle_visibility():
+            show = self._api_show_var.get()
+            llm_entry.config(show="" if show else "*")
+            tts_entry.config(show="" if show else "*")
+
+        ttk.Checkbutton(
+            main, text="Show keys (keep hidden when sharing screen)",
+            variable=self._api_show_var, command=_toggle_visibility,
+        ).pack(anchor=tk.W, pady=(2, 0))
+
+        ttk.Separator(main, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+
+        # -- Buttons --
+        btn_frame = ttk.Frame(main)
+        btn_frame.pack(fill=tk.X)
+
+        def _save():
+            # Find .env file path (project root)
+            project_root = Path(__file__).resolve().parent
+            env_path = project_root / ".env"
+
+            # Read existing .env (if any) to preserve non-key lines
+            existing_lines = {}
+            if env_path.exists():
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            existing_lines[k.strip()] = line  # store full raw line
+
+            # Build new .env content
+            new_llm = self._api_llm_var.get().strip()
+            new_tts = self._api_tts_var.get().strip()
+
+            lines = []
+            lines.append("# CouncilCast Studio API keys — generated by Configure API Keys dialog")
+            lines.append(f"COUNCILCAST_LLM_API_KEY={new_llm}")
+            lines.append(f"COUNCILCAST_TTS_API_KEY={new_tts}")
+
+            with open(env_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+
+            # Reload environment
+            from councilcast.config import load_env
+            load_env()
+
+            messagebox.showinfo("Saved", f"Keys saved to {env_path}\n\nRestart the app for all changes to take effect.\n(Keys loaded fresh when you click Generate Episode.)")
+            dialog.destroy()
+
+        ttk.Button(btn_frame, text="Save to .env", command=_save).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(btn_frame, text="Cancel", command=dialog.destroy).pack(side=tk.LEFT)
 
 
 def main() -> None:

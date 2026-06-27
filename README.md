@@ -53,6 +53,18 @@ If `COUNCILCAST_LLM_API_KEY` is not set, the app falls back to `OPENAI_API_KEY` 
 | `.md`     | Markdown   |                               |
 | `.pdf`    | PDF        | Requires `pypdf` (included in requirements) |
 
+## Adding API Keys
+
+To use real AI-generated content (instead of Demo Mode):
+
+1. Copy the example file: `cp .env.example .env`
+2. Open `.env` in a text editor
+3. Paste your OpenAI API key after `COUNCILCAST_LLM_API_KEY=`
+4. Optionally set `COUNCILCAST_TTS_API_KEY=` (can use the same key)
+5. Run `python app.py`
+6. **Uncheck "Demo Mode"** in the UI to use real generation
+7. Or click **Configure Keys** in the app to set keys graphically
+
 ## How to Use
 
 1. Click **Add Sources** and select one or more supported files.
